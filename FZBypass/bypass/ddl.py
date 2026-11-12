@@ -2,7 +2,7 @@ from requests import post as rpost ,get as rget
 from re import findall, compile
 from time import sleep, time
 from asyncio import sleep as asleep, to_thread
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from cloudscraper import create_scraper
