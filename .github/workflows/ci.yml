@@ -32,7 +32,9 @@ jobs:
           python -m pip install pytest
 
       - name: Compile Python sources
-        run: python -m compileall -q FZBypass tests
+        run: |
+          python -m compileall -q FZBypass tests
+          bash -n start.sh scripts/deploy.sh
 
       - name: Run tests
         run: python -m pytest -q
