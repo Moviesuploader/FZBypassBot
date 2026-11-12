@@ -8,10 +8,13 @@ from asyncio import create_subprocess_exec
 from sys import executable
 from threading import Thread
 
+BOT_READY = False
+
 
 class Health(BaseHTTPRequestHandler):
     def _respond(self, body=b""):
-        self.send_response(200)
+        status = 200 if BOT_READY else 503
+        self.send_response(status)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -22,7 +25,7 @@ class Health(BaseHTTPRequestHandler):
         self._respond()
 
     def do_GET(self):
-        self._respond(b"FZ Bypass Bot is alive")
+        body = b"FZ Bypass Bot is alive" if BOT_READY else b"Bot is starting"\n        self._respond(body)
 
     def log_message(self, *_args):
         pass
@@ -70,12 +73,12 @@ async def notify_restart():
 
 
 async def main():
-    Thread(target=serve_health, daemon=True).start()
+    global BOT_READY\n    Thread(target=serve_health, daemon=True).start()
     await Bypass.start()
-    LOGGER.info("FZ Bot Started!")
+    BOT_READY = True\n    LOGGER.info("FZ Bot Started!")
     await notify_restart()
     await idle()
-    await Bypass.stop()
+    BOT_READY = False\n    await Bypass.stop()
 
 
 Bypass.loop.run_until_complete(main())
