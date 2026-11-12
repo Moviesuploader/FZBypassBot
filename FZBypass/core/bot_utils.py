@@ -60,7 +60,7 @@ BypassFilter = create(auto_bypass)
 def get_gdriveid(link):
     parsed = urlparse(link)
     found = search(
-        r"(?:/folders/|/file/d/|/d/)([-\\w]+)",
+        r"(?:/folders/|/file/d/|/d/)([-A-Za-z0-9_]+)",
         parsed.path,
     )
     if found:
