@@ -2,7 +2,8 @@ from os import getenv, makedirs
 from time import time
 from wzgram import Client
 from wzgram.enums import ParseMode
-from logging import getLogger, FileHandler, StreamHandler, INFO, ERROR, basicConfig
+from logging import getLogger, StreamHandler, INFO, ERROR, basicConfig
+from logging.handlers import RotatingFileHandler
 from uvloop import install
 
 install()
@@ -19,7 +20,12 @@ LOG_FILE = f"{DATA_DIR}/log.txt"
 basicConfig(
     format="[%(asctime)s] [%(levelname)s] - %(message)s",
     datefmt="%d-%b-%y %I:%M:%S %p",
-    handlers=[FileHandler(LOG_FILE, encoding="utf-8"), StreamHandler()],
+    handlers=[
+        RotatingFileHandler(
+            LOG_FILE, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+        ),
+        StreamHandler(),
+    ],
     level=INFO,
 )
 
