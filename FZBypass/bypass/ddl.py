@@ -1,14 +1,14 @@
 from requests import post as rpost ,get as rget
 from re import findall, compile
 from time import sleep, time
-from asyncio import sleep as asleep
+from asyncio import sleep as asleep, to_thread
 from urllib.parse import quote, urlparse
 
 from bs4 import BeautifulSoup
 from cloudscraper import create_scraper
 from curl_cffi.requests import Session as cSession
 from requests import Session, get as rget
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 
 from FZBypass import Config
 from FZBypass.core.exceptions import DDLException
@@ -115,53 +115,57 @@ async def terabox(url: str) -> str:
     except:
         raise DDLException("Link Extraction Failed")
 
-async def try2link(url: str) -> str:
-    DOMAIN = 'https://try2link.com'
-    code = url.split('/')[-1]
-
-    async with ClientSession() as session:
-        referers = ['https://hightrip.net/', 'https://to-travel.netl', 'https://world2our.com/']
-        for referer in referers:
-            async with session.get(f'{DOMAIN}/{code}', headers={"Referer": referer}) as res:
-                if res.status == 200:
-                    html = await res.text()
-                    break
-        soup = BeautifulSoup(html, "html.parser")
-        inputs = soup.find(id="go-link").find_all(name="input")
-        data = { input.get('name'): input.get('value') for input in inputs }
-        await asleep(6)
-        async with session.post(f"{DOMAIN}/links/go", data=data, headers={ "X-Requested-With": "XMLHttpRequest" }) as resp:
-            if 'application/json' in resp.headers.get('Content-Type'):
-                json_data = await resp.json()  
-                try:
-                    return json_data['url']
-                except:        
-                    raise DDLException("Link Extraction Failed")
-
-
 async def gyanilinks(url: str) -> str:
-    '''
-    Based on https://github.com/whitedemon938/Bypass-Scripts
-    '''
-    code = url.split('/')[-1]
-    useragent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-    DOMAIN = "https://go.bloggingaro.com"
-    
-    async with ClientSession() as session:
-        async with session.get(f"{DOMAIN}/{code}", headers={'Referer':'https://tech.hipsonyc.com/','User-Agent': useragent}) as res:
-            cookies = res.cookies
-            html = await res.text()
-        async with session.get(f"{DOMAIN}/{code}", headers={'Referer':'https://hipsonyc.com/','User-Agent': useragent}, cookies=cookies) as resp:
-            html = await resp.text()
-        soup = BeautifulSoup(html, 'html.parser')
-        data = {inp.get('name'): inp.get('value') for inp in soup.find_all('input')}
+    code = urlparse(url).path.rstrip("/").split("/")[-1]
+    if not code:
+        raise DDLException("GyaniLinks code is missing")
+    useragent = (
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    )
+    domain = "https://go.bloggingaro.com"
+
+    async with ClientSession(timeout=ClientTimeout(total=30, connect=8)) as session:
+        async with session.get(
+            f"{domain}/{code}",
+            headers={"Referer": "https://tech.hipsonyc.com/", "User-Agent": useragent},
+        ) as response:
+            response.raise_for_status()
+            cookies = response.cookies
+        async with session.get(
+            f"{domain}/{code}",
+            headers={"Referer": "https://hipsonyc.com/", "User-Agent": useragent},
+            cookies=cookies,
+        ) as response:
+            response.raise_for_status()
+            html = await response.text()
+
+        soup = BeautifulSoup(html, "html.parser")
+        data = {
+            item.get("name"): item.get("value", "")
+            for item in soup.find_all("input")
+            if item.get("name")
+        }
+        if not data:
+            raise DDLException("GyaniLinks form tokens were not found")
+
         await asleep(5)
-        async with session.post(f"{DOMAIN}/links/go", data=data, headers={'X-Requested-With':'XMLHttpRequest','User-Agent': useragent, 'Referer': f"{DOMAIN}/{code}"}, cookies=cookies) as links:
-            if 'application/json' in links.headers.get('Content-Type'):
-                try:
-                    return (await links.json())['url']
-                except Exception:
-                      raise DDLException("Link Extraction Failed")
+        async with session.post(
+            f"{domain}/links/go",
+            data=data,
+            headers={
+                "X-Requested-With": "XMLHttpRequest",
+                "User-Agent": useragent,
+                "Referer": f"{domain}/{code}",
+            },
+            cookies=cookies,
+        ) as response:
+            response.raise_for_status()
+            payload = await response.json(content_type=None)
+        destination = payload.get("url") if isinstance(payload, dict) else None
+        if not destination:
+            raise DDLException("GyaniLinks did not return a destination URL")
+        return destination
 
 
 async def ouo(url: str):
@@ -217,112 +221,212 @@ async def mdisk(url: str) -> str:
 
 
 async def transcript(url: str, DOMAIN: str, ref: str, sltime) -> str:
-    code = url.rstrip("/").split("/")[-1]
-    useragent = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
-
-    async with ClientSession() as session:
-         async with session.get(f"{DOMAIN}/{code}", headers={'Referer': ref, 'User-Agent': useragent}) as res:
-             html = await res.text()
-             cookies = res.cookies
-         soup = BeautifulSoup(html, "html.parser")
-         title_tag = soup.find('title')
-         if title_tag and title_tag.text == 'Just a moment...':
-             return "Unable To Bypass Due To Cloudflare Protected"
-         else:
-             data = {inp.get('name'): inp.get('value') for inp in soup.find_all('input') if inp.get('name') and inp.get('value')}
-             await asleep(sltime)
-             async with session.post(f"{DOMAIN}/links/go", data=data, headers={'Referer': f"{DOMAIN}/{code}", 'X-Requested-With':'XMLHttpRequest', 'User-Agent': useragent}, cookies=cookies) as resp:
-                  try:
-                      if 'application/json' in resp.headers.get('Content-Type'):
-                          return (await resp.json())['url']
-                  except Exception:
-                      raise DDLException("Link Extraction Failed")
-
-
-async def justpaste(url: str):
-    resp = rget(url, verify=False)
-    soup = BeautifulSoup(resp.text, "html.parser")
-    inps = soup.select('div[id="articleContent"] > p')
-    return ", ".join(elem.string for elem in inps)
-    
-
-async def linksxyz(url: str):
-    resp = rget(url)
-    soup = BeautifulSoup(resp.text, "html.parser")
-    inps = soup.select('div[id="redirect-info"] > a')
-    return inps[0]["href"]
-
-
-async def shareus(url: str) -> str:
-    DOMAIN = f"https://api.shrslink.xyz"
-    code = url.split('/')[-1]
-    headers = {
-        'User-Agent':'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-        'Origin':'https://shareus.io',
-    }
-    api = f"{DOMAIN}/v?shortid={code}&initial=true&referrer="
-    id = rget(api, headers=headers).json()['sid']
-    if id:
-        api_2 = f"{DOMAIN}/get_link?sid={id}"
-        res = rget(api_2, headers=headers)
-        if res:
-            return res.json()['link_info']['destination']
-        else:
-            raise DDLException("Link Extraction Failed")
-    else:
-        raise DDLException("ID Error")     
-
-
-async def dropbox(url: str) -> str:
-    return (
-        url.replace("www.", "")
-        .replace("dropbox.com", "dl.dropboxusercontent.com")
-        .replace("?dl=0", "")
+    code = urlparse(url).path.rstrip("/").split("/")[-1]
+    if not code:
+        raise DDLException("Shortener code is missing")
+    useragent = (
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
     )
 
+    async with ClientSession(timeout=ClientTimeout(total=35, connect=8)) as session:
+        async with session.get(
+            f"{DOMAIN.rstrip('/')}/{code}",
+            headers={"Referer": ref, "User-Agent": useragent},
+        ) as response:
+            response.raise_for_status()
+            html = await response.text()
 
-async def linkvertise(url: str) -> str:
-    resp = rget("https://bypass.pm/bypass2", params={"url": url}).json()
-    if resp["success"]:
-        return resp["destination"]
-    else:
-        raise DDLException(resp["msg"])
+        soup = BeautifulSoup(html, "html.parser")
+        title_tag = soup.find("title")
+        if title_tag and "just a moment" in title_tag.get_text(" ", strip=True).lower():
+            raise DDLException("Shortener is protected by Cloudflare; bypass unavailable")
+
+        data = {
+            item.get("name"): item.get("value", "")
+            for item in soup.find_all("input")
+            if item.get("name")
+        }
+        if not data:
+            raise DDLException("Shortener form tokens were not found")
+
+        await asleep(max(0, min(float(sltime), 20)))
+        async with session.post(
+            f"{DOMAIN.rstrip('/')}/links/go",
+            data=data,
+            headers={
+                "Referer": f"{DOMAIN.rstrip('/')}/{code}",
+                "X-Requested-With": "XMLHttpRequest",
+                "User-Agent": useragent,
+            },
+        ) as response:
+            response.raise_for_status()
+            payload = await response.json(content_type=None)
+
+        destination = payload.get("url") if isinstance(payload, dict) else None
+        parsed_destination = urlparse(destination or "")
+        if parsed_destination.scheme not in {"http", "https"} or not parsed_destination.hostname:
+            raise DDLException("Shortener did not return a valid destination URL")
+        return destination
 
 
-async def rslinks(url: str) -> str:
-    resp = rget(url, stream=True, allow_redirects=False)
-    code = resp.headers["location"].split("ms9")[-1]
-    try:
-        return f"http://techyproio.blogspot.com/p/short.html?{code}=="
-    except:
-        raise DDLException("Link Extraction Failed")
+def _justpaste_sync(url: str):
+    resp = rget(url, timeout=(5, 20))
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+    paragraphs = soup.select('div[id="articleContent"] > p')
+    text = ", ".join(p.get_text(" ", strip=True) for p in paragraphs)
+    if not text:
+        raise DDLException("No paste content found")
+    return text
 
 
-async def shorter(url: str) -> str:
-    try:
-        cget = create_scraper().request
-        resp = cget("GET", url, allow_redirects=False)
-        return resp.headers["Location"]
-    except:
-        raise DDLException("Link Extraction Failed")
+def _linksxyz_sync(url: str):
+    resp = rget(url, timeout=(5, 20))
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+    links = soup.select('div[id="redirect-info"] > a[href]')
+    if not links:
+        raise DDLException("Redirect target not found")
+    return links[0]["href"]
+
+
+def _shareus_sync(url: str) -> str:
+    domain = "https://api.shrslink.xyz"
+    code = urlparse(url).path.rstrip("/").split("/")[-1]
+    if not code:
+        raise DDLException("ShareUs short code is missing")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36",
+        "Origin": "https://shareus.io",
+    }
+    response = rget(
+        f"{domain}/v",
+        params={"shortid": code, "initial": "true", "referrer": ""},
+        headers=headers,
+        timeout=(5, 20),
+    )
+    response.raise_for_status()
+    sid = response.json().get("sid")
+    if not sid:
+        raise DDLException("ShareUs did not return a session ID")
+    response = rget(
+        f"{domain}/get_link", params={"sid": sid}, headers=headers, timeout=(5, 20)
+    )
+    response.raise_for_status()
+    destination = response.json().get("link_info", {}).get("destination")
+    if not destination:
+        raise DDLException("ShareUs destination was not returned")
+    return destination
+
+
+def _linkvertise_sync(url: str) -> str:
+    response = rget(
+        "https://bypass.pm/bypass2",
+        params={"url": url},
+        timeout=(5, 20),
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if payload.get("success") and payload.get("destination"):
+        return payload["destination"]
+    raise DDLException(payload.get("msg") or "Linkvertise bypass service failed")
+
+
+def _rslinks_sync(url: str) -> str:
+    response = rget(
+        url, stream=True, allow_redirects=False, timeout=(5, 20)
+    )
+    location = response.headers.get("location")
+    response.close()
+    if not location or "ms9" not in location:
+        raise DDLException("RSLinks redirect token was not found")
+    code = location.split("ms9", 1)[-1]
+    return f"https://techyproio.blogspot.com/p/short.html?{code}=="
+
+
+def _shorter_sync(url: str) -> str:
+    response = create_scraper().request(
+        "GET", url, allow_redirects=True, timeout=(5, 20)
+    )
+    if response.url and response.url != url:
+        return response.url
+    location = response.headers.get("Location")
+    if location:
+        return location
+    raise DDLException("No redirect target returned by shortener")
+
+
+def _appurl_sync(url: str):
+    response = create_scraper().request(
+        "GET", url, allow_redirects=True, timeout=(5, 20)
+    )
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
+    tag = soup.select_one('meta[property="og:url"][content]')
+    if not tag:
+        raise DDLException("AppURL destination metadata not found")
+    return tag["content"]
+
+
+def _surl_sync(url: str):
+    response = create_scraper().request(
+        "GET", f"{url}+", timeout=(5, 20)
+    )
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
+    tag = soup.select_one("p.long-url")
+    if not tag:
+        raise DDLException("SURL destination not found")
+    parts = tag.get_text(" ", strip=True).split()
+    if len(parts) < 2:
+        raise DDLException("SURL destination format was not recognized")
+    return parts[1]
+
+
+def _thinfi_sync(url: str) -> str:
+    response = rget(url, timeout=(5, 20))
+    response.raise_for_status()
+    soup = BeautifulSoup(response.content, "html.parser")
+    anchor = soup.select_one("p a[href]")
+    if not anchor:
+        raise DDLException("Thinfi destination not found")
+    return anchor["href"]
+
+
+# These handlers use synchronous requests/cloudscraper clients. Keep network
+# I/O off the Telegram event loop.
+async def justpaste(url: str):
+    return await to_thread(_justpaste_sync, url)
+
+
+async def linksxyz(url: str):
+    return await to_thread(_linksxyz_sync, url)
+
+
+async def shareus(url: str):
+    return await to_thread(_shareus_sync, url)
+
+
+async def linkvertise(url: str):
+    return await to_thread(_linkvertise_sync, url)
+
+
+async def rslinks(url: str):
+    return await to_thread(_rslinks_sync, url)
+
+
+async def shorter(url: str):
+    return await to_thread(_shorter_sync, url)
 
 
 async def appurl(url: str):
-    cget = create_scraper().request
-    resp = cget("GET", url, allow_redirects=False)
-    soup = BeautifulSoup(resp.text, "html.parser")
-    return soup.select('meta[property="og:url"]')[0]["content"]
+    return await to_thread(_appurl_sync, url)
 
 
 async def surl(url: str):
-    cget = create_scraper().request
-    resp = cget("GET", f"{url}+")
-    soup = BeautifulSoup(resp.text, "html.parser")
-    return soup.select('p[class="long-url"]')[0].string.split()[1]
+    return await to_thread(_surl_sync, url)
 
 
-async def thinfi(url: str) -> str:
-    try:
-        return BeautifulSoup(rget(url).content, "html.parser").p.a.get("href")
-    except:
-        raise DDLException("Link Extraction Failed")
+async def thinfi(url: str):
+    return await to_thread(_thinfi_sync, url)

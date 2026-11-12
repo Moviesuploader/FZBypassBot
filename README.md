@@ -41,7 +41,13 @@
 
 ### ***Shorten Sites***
 
-- <b>Last Updated</b> : <kbd>Unknown</kbd>
+- <b>Last Updated</b> : <kbd>Historical list (mostly 2024)</kbd>
+
+> **Important:** The status icons below are legacy project notes, not live health checks.
+> See [SHORTENER_AUDIT.md](SHORTENER_AUDIT.md) for the latest code audit and known service limitations.\n> A handler being present does not guarantee a shortener currently works: sites change
+> their domains, forms, anti-bot checks and API responses. Current code-level regression
+> tests cover selected routing and validation paths. Live end-to-end bypass verification
+> requires a current, real short URL from the service being tested.
 
 <details>
     <summary>Shortening Sites<sup><kbd>Click Here to Expand</kbd></sup></summary>
