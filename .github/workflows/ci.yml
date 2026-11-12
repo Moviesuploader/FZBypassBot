@@ -36,3 +36,11 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -q
+
+      - name: Validate Compose configuration
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
+      - name: Build production image
+        run: docker build --pull -t fzbypassbot:ci .
