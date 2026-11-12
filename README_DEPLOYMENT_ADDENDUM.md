@@ -23,7 +23,7 @@ bash scripts/deploy.sh
 docker compose logs --tail=100 -f fzbypass
 ```
 
-The bot starts automatically after a VPS reboot. Logs and restart-notification
+The bot starts automatically after a VPS reboot. Logs, the Telegram client session, and restart-notification
 state are persisted in the local `data/` directory. The health endpoint listens
 inside the container on port 8080; it does not need to be exposed publicly.
 
