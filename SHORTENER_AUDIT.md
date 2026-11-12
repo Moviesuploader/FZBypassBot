@@ -41,3 +41,15 @@ shortener's changing HTML, cookies, anti-bot challenge, or destination API.
 
 For true end-to-end verification, test with a currently generated short URL from
 each service. Never use guessed/fabricated short codes as proof of a working bypass.
+
+ 
+## Newly requested links
+
+| Service | Code status | Verification |
+|---|---|---|
+| gplinks.co | Routed through the existing bounded form resolver; explicitly detects and rejects Turnstile pages | Supplied alias not live-verified; pages requiring interactive Turnstile are not bypassed |
+| exeygo.com | Recognized with an explicit interactive Turnstile requirement error | No automated CAPTCHA bypass; supplied alias not live-verified |
+| cuttty.com | Recognized with an explicit interactive Turnstile requirement error | No automated CAPTCHA bypass; supplied alias not live-verified |
+
+These services may change their redirect and verification flow. A supported route means
+the bot recognizes the provider; it does not mean every challenge can be completed.

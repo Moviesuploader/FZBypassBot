@@ -403,6 +403,20 @@ async def direct_link_checker(link, onlylink=False):
         blink = await justpaste(link)
     elif bool(match(r"https?:\/\/linksxyz\.\S+", link)):
         blink = await linksxyz(link)
+    elif domain in {"gplinks.co", "www.gplinks.co"} and bool(parsed.path.strip("/")):
+        blink = await transcript(
+            link, "https://gplinks.co/", "https://gplinks.co/", 5
+        )
+    elif domain in {"exeygo.com", "www.exeygo.com"} and bool(parsed.path.strip("/")):
+        raise DDLException(
+            "Exeygo requires an interactive Cloudflare Turnstile verification; "
+            "this bot cannot solve or bypass that challenge."
+        )
+    elif domain in {"cuttty.com", "www.cuttty.com"} and bool(parsed.path.strip("/")):
+        raise DDLException(
+            "Cuttty requires an interactive Cloudflare Turnstile verification; "
+            "this bot cannot solve or bypass that challenge."
+        )
     elif domain in {"shrinkme.click", "www.shrinkme.click"} and bool(parsed.path.strip("/")):
         blink = await shrinkme(link)
 

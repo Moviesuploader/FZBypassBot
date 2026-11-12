@@ -238,6 +238,11 @@ async def transcript(url: str, DOMAIN: str, ref: str, sltime) -> str:
             html = await response.text()
 
         soup = BeautifulSoup(html, "html.parser")
+        if soup.select_one(".cf-turnstile, [name='cf-turnstile-response']"):
+            raise DDLException(
+                "This shortener requires interactive Cloudflare Turnstile verification; "
+                "automatic bypass is not supported."
+            )
         title_tag = soup.find("title")
         if title_tag and "just a moment" in title_tag.get_text(" ", strip=True).lower():
             raise DDLException("Shortener is protected by Cloudflare; bypass unavailable")
