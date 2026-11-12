@@ -1,0 +1,15 @@
+.git
+.github
+.venv
+venv
+__pycache__
+*.py[cod]
+*.session
+*.session-journal
+.env
+config.py
+log.txt
+data
+.pytest_cache
+.ruff_cache
+.coverage
