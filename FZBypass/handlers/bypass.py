@@ -70,43 +70,43 @@ async def bypass_check(_, message):
     output = []
     for source, result in zip(links, results):
         if isinstance(result, Exception):
-            result_text = f"\\n┖ <b>Bypass Error:</b> {escape(str(result))}"
+            result_text = f"\n┖ <b>Bypass Error:</b> {escape(str(result))}"
         elif is_excep_link(source):
             result_text = str(result)
         elif isinstance(result, list):
             result_text, branch = "", "┖"
             for index, target in reversed(list(enumerate(result, start=1))):
                 result_text = (
-                    f"\\n{branch} <b>{index}x Bypass Link:</b> {target}"
+                    f"\n{branch} <b>{index}x Bypass Link:</b> {target}"
                     + result_text
                 )
                 branch = "┠"
         else:
-            result_text = f"\\n┖ <b>Bypass Link:</b> {result}"
+            result_text = f"\n┖ <b>Bypass Link:</b> {result}"
 
         if is_excep_link(source):
-            output.append(f"{result_text}\\n\\n━━━━━━━✦✗✦━━━━━━━\\n\\n")
+            output.append(f"{result_text}\n\n━━━━━━━✦✗✦━━━━━━━\n\n")
         else:
             output.append(
                 f"┎ <b>Source Link:</b> {escape(source)}{result_text}"
-                "\\n\\n━━━━━━━✦✗✦━━━━━━━\\n\\n"
+                "\n\n━━━━━━━✦✗✦━━━━━━━\n\n"
             )
 
     elapsed = convert_time(time() - started)
     if output:
         output[-1] += (
             f"┎ <b>Total Links:</b> {len(links)}"
-            f"\\n┠ <b>Results In <code>{elapsed}</code></b>"
-            f"\\n┖ <b>By:</b> {message.from_user.mention} "
+            f"\n┠ <b>Results In <code>{elapsed}</code></b>"
+            f"\n┖ <b>By:</b> {message.from_user.mention} "
             f"(#ID{message.from_user.id})"
         )
     if omitted:
         output.append(
-            f"\\n<i>Note: {omitted} extra link(s) skipped; "
+            f"\n<i>Note: {omitted} extra link(s) skipped; "
             f"maximum is {MAX_LINKS_PER_MESSAGE} per message.</i>"
         )
 
-    text = "━━━━━━━✦✗✦━━━━━━━\\n\\n"
+    text = "━━━━━━━✦✗✦━━━━━━━\n\n"
     for item in output:
         if len(text) + len(item) > 3900:
             await wait_msg.edit(text, disable_web_page_preview=True)
@@ -142,14 +142,14 @@ async def inline_query(_, query):
             if not is_excep_link(link):
                 body = (
                     f"┎ <b>Source Link:</b> {escape(link)}"
-                    f"\\n┃\\n┖ <b>Bypass Link:</b> {body}"
+                    f"\n┃\n┖ <b>Bypass Link:</b> {body}"
                 )
             answers.append(
                 InlineQueryResultArticle(
                     title="✅️ Bypass Link Success!",
                     input_message_content=InputTextMessageContent(
-                        f"{body}\\n\\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏"
-                        f"\\n\\n🧭 <b>Took Only <code>{elapsed}</code></b>",
+                        f"{body}\n\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏"
+                        f"\n\n🧭 <b>Took Only <code>{elapsed}</code></b>",
                         disable_web_page_preview=True,
                     ),
                     description=f"Bypass via !bp {link}",
@@ -165,8 +165,8 @@ async def inline_query(_, query):
             elapsed = convert_time(time() - started)
             body = (
                 f"┎ <b>Source Link:</b> {escape(link)}"
-                f"\\n┃\\n┖ <b>Bypass Error:</b> {escape(str(error))}"
-                f"\\n\\n🧭 <b>Took Only <code>{elapsed}</code></b>"
+                f"\n┃\n┖ <b>Bypass Error:</b> {escape(str(error))}"
+                f"\n\n🧭 <b>Took Only <code>{elapsed}</code></b>"
             )
             answers.append(
                 InlineQueryResultArticle(
@@ -188,9 +188,9 @@ async def inline_query(_, query):
             InlineQueryResultArticle(
                 title="♻️ Bypass Usage: Inline",
                 input_message_content=InputTextMessageContent(
-                    "<b><i>FZ Bypass Bot!</i></b>\\n\\n"
+                    "<b><i>FZ Bypass Bot!</i></b>\n\n"
                     "<i>A multi-threaded Telegram bot for supported shortener "
-                    "and file-hosting links.</i>\\n\\n"
+                    "and file-hosting links.</i>\n\n"
                     "🎛 <b>Inline Use:</b> <code>!bp [Single Link]</code>"
                 ),
                 description="Bypass via !bp [link]",
