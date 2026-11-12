@@ -1,57 +1,48 @@
-from os import path as opath, getenv
-from logging import (
-    StreamHandler,
-    INFO,
-    basicConfig,
-    error as log_error,
-    info as log_info,
-)
-from logging.handlers import RotatingFileHandler
-from subprocess import run as srun
+"""Safe, manual source updater for non-container deployments.
 
-basicConfig(
-    level=INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s [%(filename)s:%(lineno)d]",
-    datefmt="%d-%b-%y %I:%M:%S %p",
-    handlers=[
-        RotatingFileHandler("log.txt", maxBytes=50000000, backupCount=10),
-        StreamHandler(),
-    ],
-)
+Docker deployments should use: git pull --ff-only && docker compose up -d --build.
+This script never removes .git or runs a shell command.
+"""
+from os import getenv
+from pathlib import Path
+from subprocess import run
+import sys
 
 try:
     import config
 except ImportError:
     config = None
 
-UPSTREAM_REPO = getattr(config, "UPSTREAM_REPO", None) or getenv(
-    "UPSTREAM_REPO", "https://github.com/rjriajul/FZBypassBot"
-)
-UPSTREAM_BRANCH = getattr(config, "UPSTREAM_BRANCH", None) or getenv(
-    "UPSTREAM_BRANCH", "main"
-)
+UPSTREAM_REPO = (
+    getattr(config, "UPSTREAM_REPO", None) if config else None
+) or getenv("UPSTREAM_REPO", "https://github.com/rjriajul/FZBypassBot")
+UPSTREAM_BRANCH = (
+    getattr(config, "UPSTREAM_BRANCH", None) if config else None
+) or getenv("UPSTREAM_BRANCH", "main")
 
-if UPSTREAM_REPO is not None:
-    if opath.exists(".git"):
-        srun(["rm", "-rf", ".git"])
 
-    update = srun(
-        [
-            f"git init -q \
-                     && git config --global user.email 93116400+rjriajul@users.noreply.github.com \
-                     && git config --global user.name rjriajul \
-                     && git add . \
-                     && git commit -sm update -q \
-                     && git remote add origin {UPSTREAM_REPO} \
-                     && git fetch origin -q \
-                     && git reset --hard origin/{UPSTREAM_BRANCH} -q"
-        ],
-        shell=True,
+def main():
+    if not Path(".git").is_dir():
+        print("Update skipped: this directory is not a Git checkout.")
+        print("For Docker, update the source on the host and rebuild the image.")
+        return 2
+
+    fetch = run(["git", "fetch", "--prune", "origin"], check=False)
+    if fetch.returncode:
+        print("Update failed while fetching origin.")
+        return fetch.returncode
+
+    update = run(
+        ["git", "pull", "--ff-only", UPSTREAM_REPO, UPSTREAM_BRANCH],
+        check=False,
     )
+    if update.returncode:
+        print("Update failed. Resolve local changes or branch divergence manually.")
+        return update.returncode
 
-    if update.returncode == 0:
-        log_info("Successfully updated with latest commit from UPSTREAM_REPO")
-    else:
-        log_error(
-            "Something went wrong while updating, check UPSTREAM_REPO if valid or not!"
-        )
+    print("Update completed. Restart the bot process to load the new code.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
