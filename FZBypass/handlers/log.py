@@ -2,10 +2,10 @@ from html import escape
 from wzgram.filters import command, user, regex
 from wzgram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from FZBypass import Config, Bypass, LOGGER
+from FZBypass import Config, Bypass, LOGGER, DATA_DIR
 from FZBypass.core.commands import BotCommands
 
-LOG_FILE = "log.txt"
+LOG_FILE = f"{DATA_DIR}/log.txt"
 MAX_DISPLAY = 3500
 
 
