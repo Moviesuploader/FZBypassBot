@@ -275,26 +275,53 @@ async def mdisk(url: str) -> str:
 
 
 async def transcript(url: str, DOMAIN: str, ref: str, sltime) -> str:
-    code = url.rstrip("/").split("/")[-1]
-    useragent = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+    code = urlparse(url).path.rstrip("/").split("/")[-1]
+    if not code:
+        raise DDLException("Shortener code is missing")
+    useragent = (
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    )
 
-    async with ClientSession() as session:
-         async with session.get(f"{DOMAIN}/{code}", headers={'Referer': ref, 'User-Agent': useragent}) as res:
-             html = await res.text()
-             cookies = res.cookies
-         soup = BeautifulSoup(html, "html.parser")
-         title_tag = soup.find('title')
-         if title_tag and title_tag.text == 'Just a moment...':
-             return "Unable To Bypass Due To Cloudflare Protected"
-         else:
-             data = {inp.get('name'): inp.get('value') for inp in soup.find_all('input') if inp.get('name') and inp.get('value')}
-             await asleep(sltime)
-             async with session.post(f"{DOMAIN}/links/go", data=data, headers={'Referer': f"{DOMAIN}/{code}", 'X-Requested-With':'XMLHttpRequest', 'User-Agent': useragent}, cookies=cookies) as resp:
-                  try:
-                      if 'application/json' in resp.headers.get('Content-Type'):
-                          return (await resp.json())['url']
-                  except Exception:
-                      raise DDLException("Link Extraction Failed")
+    async with ClientSession(timeout=ClientTimeout(total=35, connect=8)) as session:
+        async with session.get(
+            f"{DOMAIN.rstrip('/')}/{code}",
+            headers={"Referer": ref, "User-Agent": useragent},
+        ) as response:
+            response.raise_for_status()
+            html = await response.text()
+
+        soup = BeautifulSoup(html, "html.parser")
+        title_tag = soup.find("title")
+        if title_tag and "just a moment" in title_tag.get_text(" ", strip=True).lower():
+            raise DDLException("Shortener is protected by Cloudflare; bypass unavailable")
+
+        data = {
+            item.get("name"): item.get("value", "")
+            for item in soup.find_all("input")
+            if item.get("name")
+        }
+        if not data:
+            raise DDLException("Shortener form tokens were not found")
+
+        await asleep(max(0, min(float(sltime), 20)))
+        async with session.post(
+            f"{DOMAIN.rstrip('/')}/links/go",
+            data=data,
+            headers={
+                "Referer": f"{DOMAIN.rstrip('/')}/{code}",
+                "X-Requested-With": "XMLHttpRequest",
+                "User-Agent": useragent,
+            },
+        ) as response:
+            response.raise_for_status()
+            payload = await response.json(content_type=None)
+
+        destination = payload.get("url") if isinstance(payload, dict) else None
+        parsed_destination = urlparse(destination or "")
+        if parsed_destination.scheme not in {"http", "https"} or not parsed_destination.hostname:
+            raise DDLException("Shortener did not return a valid destination URL")
+        return destination
 
 
 def _justpaste_sync(url: str):
