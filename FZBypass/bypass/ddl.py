@@ -240,92 +240,127 @@ async def transcript(url: str, DOMAIN: str, ref: str, sltime) -> str:
 
 
 def _justpaste_sync(url: str):
-    resp = rget(url, verify=False)
+    resp = rget(url, timeout=(5, 20))
+    resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
-    inps = soup.select('div[id="articleContent"] > p')
-    return ", ".join(elem.string for elem in inps)
-    
+    paragraphs = soup.select('div[id="articleContent"] > p')
+    text = ", ".join(p.get_text(" ", strip=True) for p in paragraphs)
+    if not text:
+        raise DDLException("No paste content found")
+    return text
+
 
 def _linksxyz_sync(url: str):
-    resp = rget(url)
+    resp = rget(url, timeout=(5, 20))
+    resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
-    inps = soup.select('div[id="redirect-info"] > a')
-    return inps[0]["href"]
+    links = soup.select('div[id="redirect-info"] > a[href]')
+    if not links:
+        raise DDLException("Redirect target not found")
+    return links[0]["href"]
 
 
 def _shareus_sync(url: str) -> str:
-    DOMAIN = f"https://api.shrslink.xyz"
-    code = url.split('/')[-1]
+    domain = "https://api.shrslink.xyz"
+    code = urlparse(url).path.rstrip("/").split("/")[-1]
+    if not code:
+        raise DDLException("ShareUs short code is missing")
     headers = {
-        'User-Agent':'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-        'Origin':'https://shareus.io',
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36",
+        "Origin": "https://shareus.io",
     }
-    api = f"{DOMAIN}/v?shortid={code}&initial=true&referrer="
-    id = rget(api, headers=headers).json()['sid']
-    if id:
-        api_2 = f"{DOMAIN}/get_link?sid={id}"
-        res = rget(api_2, headers=headers)
-        if res:
-            return res.json()['link_info']['destination']
-        else:
-            raise DDLException("Link Extraction Failed")
-    else:
-        raise DDLException("ID Error")     
-
-
-async def dropbox(url: str) -> str:
-    return (
-        url.replace("www.", "")
-        .replace("dropbox.com", "dl.dropboxusercontent.com")
-        .replace("?dl=0", "")
+    response = rget(
+        f"{domain}/v",
+        params={"shortid": code, "initial": "true", "referrer": ""},
+        headers=headers,
+        timeout=(5, 20),
     )
+    response.raise_for_status()
+    sid = response.json().get("sid")
+    if not sid:
+        raise DDLException("ShareUs did not return a session ID")
+    response = rget(
+        f"{domain}/get_link", params={"sid": sid}, headers=headers, timeout=(5, 20)
+    )
+    response.raise_for_status()
+    destination = response.json().get("link_info", {}).get("destination")
+    if not destination:
+        raise DDLException("ShareUs destination was not returned")
+    return destination
 
 
 def _linkvertise_sync(url: str) -> str:
-    resp = rget("https://bypass.pm/bypass2", params={"url": url}).json()
-    if resp["success"]:
-        return resp["destination"]
-    else:
-        raise DDLException(resp["msg"])
+    response = rget(
+        "https://bypass.pm/bypass2",
+        params={"url": url},
+        timeout=(5, 20),
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if payload.get("success") and payload.get("destination"):
+        return payload["destination"]
+    raise DDLException(payload.get("msg") or "Linkvertise bypass service failed")
 
 
 def _rslinks_sync(url: str) -> str:
-    resp = rget(url, stream=True, allow_redirects=False)
-    code = resp.headers["location"].split("ms9")[-1]
-    try:
-        return f"http://techyproio.blogspot.com/p/short.html?{code}=="
-    except:
-        raise DDLException("Link Extraction Failed")
+    response = rget(
+        url, stream=True, allow_redirects=False, timeout=(5, 20)
+    )
+    location = response.headers.get("location")
+    response.close()
+    if not location or "ms9" not in location:
+        raise DDLException("RSLinks redirect token was not found")
+    code = location.split("ms9", 1)[-1]
+    return f"https://techyproio.blogspot.com/p/short.html?{code}=="
 
 
 def _shorter_sync(url: str) -> str:
-    try:
-        cget = create_scraper().request
-        resp = cget("GET", url, allow_redirects=False)
-        return resp.headers["Location"]
-    except:
-        raise DDLException("Link Extraction Failed")
+    response = create_scraper().request(
+        "GET", url, allow_redirects=True, timeout=(5, 20)
+    )
+    if response.url and response.url != url:
+        return response.url
+    location = response.headers.get("Location")
+    if location:
+        return location
+    raise DDLException("No redirect target returned by shortener")
 
 
 def _appurl_sync(url: str):
-    cget = create_scraper().request
-    resp = cget("GET", url, allow_redirects=False)
-    soup = BeautifulSoup(resp.text, "html.parser")
-    return soup.select('meta[property="og:url"]')[0]["content"]
+    response = create_scraper().request(
+        "GET", url, allow_redirects=True, timeout=(5, 20)
+    )
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
+    tag = soup.select_one('meta[property="og:url"][content]')
+    if not tag:
+        raise DDLException("AppURL destination metadata not found")
+    return tag["content"]
 
 
 def _surl_sync(url: str):
-    cget = create_scraper().request
-    resp = cget("GET", f"{url}+")
-    soup = BeautifulSoup(resp.text, "html.parser")
-    return soup.select('p[class="long-url"]')[0].string.split()[1]
+    response = create_scraper().request(
+        "GET", f"{url}+", timeout=(5, 20)
+    )
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
+    tag = soup.select_one("p.long-url")
+    if not tag:
+        raise DDLException("SURL destination not found")
+    parts = tag.get_text(" ", strip=True).split()
+    if len(parts) < 2:
+        raise DDLException("SURL destination format was not recognized")
+    return parts[1]
 
 
 def _thinfi_sync(url: str) -> str:
-    try:
-        return BeautifulSoup(rget(url).content, "html.parser").p.a.get("href")
-    except:
-        raise DDLException("Link Extraction Failed")
+    response = rget(url, timeout=(5, 20))
+    response.raise_for_status()
+    soup = BeautifulSoup(response.content, "html.parser")
+    anchor = soup.select_one("p a[href]")
+    if not anchor:
+        raise DDLException("Thinfi destination not found")
+    return anchor["href"]
 
 
 # These handlers use synchronous requests/cloudscraper clients. Keep network
