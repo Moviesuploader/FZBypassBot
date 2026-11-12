@@ -4,7 +4,6 @@ from wzgram import idle
 from wzgram.filters import command, user
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from os import path as ospath, execl, remove
-from asyncio import create_subprocess_exec
 from sys import executable
 from threading import Thread
 
