@@ -29,3 +29,14 @@ def test_get_gdriveid_from_folder_url():
 
 def test_get_gdriveid_from_query_url():
     assert get_gdriveid("https://drive.google.com/open?id=AbC_123-xyz") == "AbC_123-xyz"
+
+from types import SimpleNamespace
+
+import FZBypass
+from FZBypass import conf
+
+
+def test_conf_falls_back_to_environment_for_zero_config(monkeypatch):
+    monkeypatch.setattr(FZBypass, "config", SimpleNamespace(API_ID=0))
+    monkeypatch.setenv("API_ID", "456")
+    assert conf("API_ID", 0) == "456"
