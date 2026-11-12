@@ -319,7 +319,7 @@ def _shrinkme_sync(url: str) -> str:
             raise DDLException("ShrinkMe form action did not match the expected host")
 
         timer_match = findall(
-            r"(?:counter_value|countdown|timer)\\s*[:=]\\s*[\\\"']?(\\d+(?:\\.\\d+)?)",
+            r"(?:counter_value|countdown|timer)\s*[:=]\s*[\\"']?(\d+(?:\.\d+)?)",
             response.text,
             flags=0,
         )
