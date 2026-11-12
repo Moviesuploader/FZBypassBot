@@ -7,7 +7,12 @@ from uvloop import install
 
 install()
 
-DATA_DIR = getenv("DATA_DIR", "data")
+try:
+    import config
+except ImportError:
+    config = None
+
+DATA_DIR = str((getattr(config, "DATA_DIR", None) if config else None) or getenv("DATA_DIR", "data"))
 makedirs(DATA_DIR, exist_ok=True)
 LOG_FILE = f"{DATA_DIR}/log.txt"
 
