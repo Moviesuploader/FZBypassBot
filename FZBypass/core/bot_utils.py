@@ -29,6 +29,7 @@ AuthChatsTopics = create(auth_topic)
 
 
 async def auto_bypass(_, c, message):
+    txt = message.text or ""
     if (
         Config.AUTO_BYPASS
         and message.entities
