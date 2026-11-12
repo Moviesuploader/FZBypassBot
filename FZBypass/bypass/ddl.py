@@ -115,60 +115,6 @@ async def terabox(url: str) -> str:
     except:
         raise DDLException("Link Extraction Failed")
 
-async def try2link(url: str) -> str:
-    code = urlparse(url).path.rstrip("/").split("/")[-1]
-    if not code:
-        raise DDLException("Try2Link code is missing")
-
-    async with ClientSession(timeout=ClientTimeout(total=30, connect=8)) as session:
-        html = None
-        referers = [
-            "https://hightrip.net/",
-            "https://to-travel.net/",
-            "https://world2our.com/",
-        ]
-        for referer in referers:
-            try:
-                async with session.get(
-                    f"https://try2link.com/{code}", headers={"Referer": referer}
-                ) as response:
-                    response.raise_for_status()
-                    html = await response.text()
-                    break
-            except Exception:
-                continue
-        if not html:
-            raise DDLException("Try2Link landing page could not be loaded")
-
-        soup = BeautifulSoup(html, "html.parser")
-        form = soup.find(id="go-link")
-        if not form:
-            raise DDLException("Try2Link form was not found")
-        data = {
-            item.get("name"): item.get("value", "")
-            for item in form.find_all("input")
-            if item.get("name")
-        }
-        if not data:
-            raise DDLException("Try2Link form tokens were not found")
-
-        await asleep(6)
-        async with session.post(
-            "https://try2link.com/links/go",
-            data=data,
-            headers={
-                "X-Requested-With": "XMLHttpRequest",
-                "Referer": f"https://try2link.com/{code}",
-            },
-        ) as response:
-            response.raise_for_status()
-            payload = await response.json(content_type=None)
-        destination = payload.get("url") if isinstance(payload, dict) else None
-        if not destination:
-            raise DDLException("Try2Link did not return a destination URL")
-        return destination
-
-
 async def gyanilinks(url: str) -> str:
     code = urlparse(url).path.rstrip("/").split("/")[-1]
     if not code:
