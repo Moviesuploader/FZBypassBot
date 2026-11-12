@@ -39,10 +39,12 @@ def test_shrinkme_resolver_posts_go_form_and_returns_external_target():
         url="https://en.mrproblogger.com/dtRhBl8X",
         status_code=200,
         request=SimpleNamespace(headers={"User-Agent": "test-agent"}),
+        raise_for_status=lambda: None,
     )
     result = SimpleNamespace(
         status_code=200,
         json=lambda: {"url": "https://destination.example/real-file"},
+        raise_for_status=lambda: None,
     )
     session = SimpleNamespace(
         get=lambda *args, **kwargs: page,
@@ -78,7 +80,7 @@ def test_shrinkme_does_not_accept_intermediate_or_invalid_destinations(destinati
         status_code=200,
         request=SimpleNamespace(headers={"User-Agent": "test-agent"}),
     )
-    result = SimpleNamespace(status_code=200, json=lambda: {"url": destination})
+    result = SimpleNamespace(status_code=200, json=lambda: {"url": destination}, raise_for_status=lambda: None)
     session = SimpleNamespace(
         get=lambda *args, **kwargs: page,
         post=lambda *args, **kwargs: result,
