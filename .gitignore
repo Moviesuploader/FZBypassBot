@@ -162,3 +162,4 @@ cython_debug/
 log.txt
 *.session
 *.session-journal
+\n# Runtime data and deployment secrets\n/data/\n.env\n.env.*\n!.env.example\n
