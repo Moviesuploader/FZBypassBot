@@ -63,3 +63,12 @@ def test_rejects_non_http_urls():
 def test_rejects_urls_without_hostname():
     with pytest.raises(DDLException):
         asyncio.run(checker.direct_link_checker("https:///missing-host"))
+
+
+def test_try2link_parked_domain_is_not_routed():
+    with pytest.raises(DDLException):
+        asyncio.run(checker.direct_link_checker("https://try2link.com/example", onlylink=True))
+
+
+def test_share_link_rejects_lookalike_domain():
+    assert not checker.is_share_link("https://notgdtot.example/file")
