@@ -35,9 +35,7 @@ LOGGER = getLogger(__name__)
 
 def conf(key, default=""):
     value = getattr(config, key, None) if config else None
-    if value is None or value == "":
-        value = getenv(key, default)
-    return value
+    return value or getenv(key, default)
 
 
 BOT_START = time()
