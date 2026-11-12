@@ -1,59 +1,72 @@
-from FZBypass import Bypass, LOGGER, Config, conf
+from FZBypass import Bypass, LOGGER, Config, conf, DATA_DIR
 from FZBypass.core.commands import BotCommands
 from wzgram import idle
 from wzgram.filters import command, user
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from os import path as ospath, execl
+from os import path as ospath, execl, remove
 from asyncio import create_subprocess_exec
 from sys import executable
 from threading import Thread
 
 
 class Health(BaseHTTPRequestHandler):
-    def _head(self):
+    def _respond(self, body=b""):
         self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
+        if body:
+            self.wfile.write(body)
 
     def do_HEAD(self):
-        self._head()
+        self._respond()
 
     def do_GET(self):
-        self._head()
-        self.wfile.write(b"FZ Bypass Bot is alive")
+        self._respond(b"FZ Bypass Bot is alive")
 
-    def log_message(self, *args):
+    def log_message(self, *_args):
         pass
 
 
 def serve_health():
     port = int(conf("PORT", 8080))
-    LOGGER.info(f"Health server listening on port {port}")
-    ThreadingHTTPServer(("0.0.0.0", port), Health).serve_forever()
+    try:
+        server = ThreadingHTTPServer(("0.0.0.0", port), Health)
+        server.daemon_threads = True
+        LOGGER.info("Health server listening on port %s", port)
+        server.serve_forever()
+    except OSError:
+        LOGGER.exception("Health server could not bind to port %s", port)
 
 
 @Bypass.on_message(command(BotCommands.RestartCommand) & user(Config.OWNER_ID))
-async def restart(client, message):
+async def restart(_, message):
     restart_message = await message.reply("<i>Restarting...</i>")
-    await (await create_subprocess_exec("python3", "update.py")).wait()
-    with open(".restartmsg", "w") as f:
-        f.write(f"{restart_message.chat.id}\n{restart_message.id}\n")
-    try:
-        execl(executable, executable, "-m", "FZBypass")
-    except Exception:
-        execl(executable, executable, "-m", "FZBypassBot/FZBypass")
+    restart_file = ospath.join(DATA_DIR, ".restartmsg")
+    with open(restart_file, "w", encoding="utf-8") as file:
+        file.write(f"{restart_message.chat.id}\n{restart_message.id}\n")
+    # Restart only the current process. Deployment updates are performed by
+    # rebuilding/restarting the container, never by deleting or resetting .git.
+    execl(executable, executable, "-m", "FZBypass")
 
 
 async def notify_restart():
-    if ospath.isfile(".restartmsg"):
-        with open(".restartmsg") as f:
-            chat_id, msg_id = map(int, f)
+    restart_file = ospath.join(DATA_DIR, ".restartmsg")
+    if not ospath.isfile(restart_file):
+        return
+    try:
+        with open(restart_file, encoding="utf-8") as file:
+            chat_id, msg_id = map(int, file.read().splitlines()[:2])
+        await Bypass.edit_message_text(
+            chat_id=chat_id, message_id=msg_id, text="<i>Restarted!</i>"
+        )
+    except Exception:
+        LOGGER.exception("Could not update the restart notification")
+    finally:
         try:
-            await Bypass.edit_message_text(
-                chat_id=chat_id, message_id=msg_id, text="<i>Restarted !</i>"
-            )
-        except Exception as e:
-            LOGGER.error(e)
+            remove(restart_file)
+        except FileNotFoundError:
+            pass
 
 
 async def main():
