@@ -58,3 +58,13 @@ named volumes (this stack does not require any).
 
 The Compose service is capped at 1.5 CPU and 2 GiB RAM, leaving resources for
 Ubuntu and other VPS tasks. Adjust only if monitoring shows the bot needs more.
+
+## Telegram API compatibility note
+
+Telegram announced Bot API 10.4 on 9 November 2026. This project currently uses
+the stable `wzgram` 3.1.1 Pyrogram-compatible client for its existing MTProto
+bot workflows; it does not call the new Bot API 10.4 HTML-widget methods.
+Accordingly, this deployment update does not claim HTML-widget support. Keep the
+stable client pinned rather than silently switching production to an unverified
+development branch; revisit the pin when a stable release documents the required
+API surface.
