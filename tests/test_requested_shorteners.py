@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from FZBypass.bypass import checker
+from FZBypass.bypass import checker, ddl
 from FZBypass.core.exceptions import DDLException
 
 
@@ -67,6 +67,6 @@ def test_transcript_rejects_turnstile_before_submitting_form(monkeypatch):
         def post(self, *args, **kwargs):
             raise AssertionError("Must not submit a Turnstile form without user verification")
 
-    monkeypatch.setattr(checker, "ClientSession", FakeSession)
+    monkeypatch.setattr(ddl, "ClientSession", FakeSession)
     with pytest.raises(DDLException, match="interactive Cloudflare Turnstile"):
         asyncio.run(checker.transcript("https://gplinks.co/OblC", "https://gplinks.co/", "https://gplinks.co/", 0))
