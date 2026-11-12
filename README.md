@@ -187,11 +187,7 @@ git clone https://github.com/Moviesuploader/FZBypassBot.git
 cd FZBypassBot
 cp .env.example .env
 nano .env
-mkdir -p data
-chown 10001:10001 data
-chmod 700 data
-docker compose build --pull
-docker compose up -d
+bash scripts/deploy.sh
 docker compose logs --tail=100 -f fzbypass
 ```
 
