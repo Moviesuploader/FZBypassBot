@@ -33,7 +33,7 @@ jobs:
 
       - name: Compile Python sources
         run: |
-          python -m compileall -q FZBypass tests
+          python -W error::SyntaxWarning -m compileall -q FZBypass tests
           bash -n start.sh scripts/deploy.sh
 
       - name: Run tests
