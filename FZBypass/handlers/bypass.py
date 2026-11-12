@@ -1,4 +1,5 @@
 from time import time
+from html import escape
 from asyncio import create_task, gather, sleep as asleep
 from wzgram.filters import user
 from wzgram.types import (
@@ -17,17 +18,21 @@ from FZBypass.core.bot_utils import AuthChatsTopics, convert_time, BypassFilter
 
 @Bypass.on_message(BypassFilter & (user(Config.OWNER_ID) | AuthChatsTopics))
 async def bypass_check(client, message):
-    uid = message.from_user.id
     if (reply_to := message.reply_to_message) and (
         reply_to.text is not None or reply_to.caption is not None
     ):
         txt = reply_to.text or reply_to.caption
-        entities = reply_to.entities or reply_to.caption_entities
-    elif Config.AUTO_BYPASS or len(message.text.split()) > 1:
+        entities = reply_to.entities or reply_to.caption_entities or []
+    elif message.text and (
+        Config.AUTO_BYPASS or len(message.text.split()) > 1
+    ):
         txt = message.text
-        entities = message.entities
+        entities = message.entities or []
     else:
         return await message.reply("<i>No Link Provided!</i>")
+
+    if not txt or not entities:
+        return await message.reply("<i>No valid link entities found!</i>")
 
     wait_msg = await message.reply("<i>Bypassing...</i>")
     start = time()
@@ -96,9 +101,11 @@ async def bypass_check(client, message):
 @Bypass.on_inline_query()
 async def inline_query(client, query):
     answers = []
-    string = query.query.lower()
-    if string.startswith("!bp "):
-        link = string.strip("!bp ")
+    string = query.query or ""
+    if string[:4].lower() == "!bp ":
+        link = string[4:].strip()
+        if not link:
+            return await query.answer("Usage: !bp [link]", cache_time=0)
         start = time()
         try:
             bp_link = await direct_link_checker(link, True)
@@ -129,7 +136,7 @@ async def inline_query(client, query):
                 )
             )
         except Exception as e:
-            bp_link = f"<b>Bypass Error:</b> {e}"
+            bp_link = f"<b>Bypass Error:</b> {escape(str(e))}"
             end = time()
 
             answers.append(
