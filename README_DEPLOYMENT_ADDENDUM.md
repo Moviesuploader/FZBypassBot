@@ -16,6 +16,9 @@ do not commit it or paste its values into support chats.
 ## 2. Build and start
 
 ```bash
+mkdir -p data
+chown 10001:10001 data
+chmod 700 data
 docker compose build --pull
 docker compose up -d
 docker compose ps
