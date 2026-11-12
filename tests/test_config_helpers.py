@@ -1,4 +1,9 @@
-from FZBypass.core.bot_utils import (\n    convert_time,\n    get_gdriveid,\n    get_readable_size,\n    progress_bar,\n)
+from FZBypass.core.bot_utils import (
+    convert_time,
+    get_gdriveid,
+    get_readable_size,
+    progress_bar,
+)
 
 
 def test_convert_time_zero():
