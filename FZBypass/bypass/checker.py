@@ -77,8 +77,8 @@ async def direct_link_checker(link, onlylink=False):
         return get_dl(link, True)
 
     # DDL Links
-    elif bool(match(r"https?:\/\/try2link\.\S+", link)):
-        blink = await try2link(link)
+    # try2link.com is parked (domain-for-sale page observed Nov 2026).
+    # Do not route user links into the obsolete form handler.
     elif bool(match(r"https?:\/\/(gyanilinks|gtlinks)\.\S+", link)):
         blink = await gyanilinks(link)
         
