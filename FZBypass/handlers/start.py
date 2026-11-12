@@ -18,7 +18,7 @@ async def start_msg(client, message):
                 [
                     InlineKeyboardButton(
                         "🔍 Deploy Own",
-                        url="https://github.com/rjriajul/FZBypassBot",
+                        url="https://github.com/Moviesuploader/FZBypassBot",
                     ),
                 ]
             ]

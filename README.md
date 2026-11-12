@@ -173,42 +173,31 @@
 ---
 
 ## ***Deploy Guide***
-1. `Heroku` or `Koyeb` or `Render` or `Scalingo` or _**More**_ _(Recommended)_
-    - Use [pyTele-Loader](https://github.com/SilentDemonSD/pyTele-Loader) and Follow further Steps.
-    - **Variables Values:**
-      - `REPO_URL`: https://github.com/rjriajul/FZBypassBot
-      - `REPO_BRANCH`: main
-      - `START_CMD`: bash start.sh
-    - _On `Render` or `Koyeb`, deploy as a **Web Service**. The bot serves a health page on `$PORT`, so the platform keeps it awake._
-2. `VPS`
-    - **Build And Run The Docker Image Using Official Docker Commands**
-        - _Clone the Repository_
-            ```
-            git clone https://github.com/rjriajul/FZBypassBot && cd FZBypassBot
-            ```
-        - _Build Docker image:_
-            ```
-            docker build . -t fzbypass
-            ```
-        - _Run the image:_
-            ```
-            docker run fzbypass
-            ```
-        - _To stop the running image:_
-            - Check Running Containers
-                ```
-                docker ps
-                ```
-            - Get the ID and Stop the Container
-                ```
-                docker stop idxxxxx
-                ```
-    - _Add `sudo` at the Start of Each Command if your CLI is rooted_
-    - _Add all Config Data in `config.py`_
-    - _Update your Repo Directly, Make sure to fill Up `UPSTREAM_REPO` & `UPSTREAM_BRANCH`_
-        ```
-        docker restart idxxxxx
-        ```
+
+### Fresh VPS (Recommended: Ubuntu 22.04+ / Docker Compose)
+
+Use the maintained [fresh VPS deployment guide](README_DEPLOYMENT_ADDENDUM.md).
+The supported deployment uses Python 3.12, a non-root container, persistent logs,
+health checks, automatic restart after VPS reboot, and a private `.env` file.
+
+Quick start after installing Docker Engine and the Compose plugin:
+
+```bash
+git clone https://github.com/Moviesuploader/FZBypassBot.git
+cd FZBypassBot
+cp .env.example .env
+nano .env
+bash scripts/deploy.sh
+docker compose logs --tail=100 -f fzbypass
+```
+
+Do not use the old `docker run fzbypass` instructions: they do not configure the
+required environment variables or persistent state. Do not run `update.py` inside
+the container. For updates, pull the intended Git branch on the VPS and rebuild
+using Docker Compose.
+
+For non-container hosting, use a supported Python runtime and set the required
+environment variables. Never commit `.env` or `config.py`.
 
 ---
 

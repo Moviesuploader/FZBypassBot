@@ -1,16 +1,16 @@
-# Copy this file to config.py in the repo root and fill it up.
-# Any value left empty here is read from the environment instead.
+# Optional Python configuration file. Prefer .env for Docker deployments.
+# Any empty value falls back to the matching environment variable.
 
 # Required
 BOT_TOKEN = ""
 API_HASH = ""
-API_ID = ""
-AUTH_CHATS = ""  # Separate multiple ids by space and : for topic_ids
-OWNER_ID = 0  # Telegram user id of the bot owner
+API_ID = 0
+OWNER_ID = 0
+AUTH_CHATS = ""
 
 # Optional
 AUTO_BYPASS = False
-CMD_SUFFIX = ""  # Suffix added to every command, e.g. "1" gives /bypass1
+CMD_SUFFIX = ""
 LARAVEL_SESSION = ""
 XSRF_TOKEN = ""
 GDTOT_CRYPT = ""
@@ -18,9 +18,10 @@ HUBDRIVE_CRYPT = ""
 DRIVEFIRE_CRYPT = ""
 KATDRIVE_CRYPT = ""
 DIRECT_INDEX = ""
-PORT = 8080  # Health server port, Render / Koyeb override it via $PORT
+PORT = 8080
+DATA_DIR = "data"
 TERA_COOKIE = ""
 
-# Update
-UPSTREAM_REPO = "https://github.com/rjriajul/FZBypassBot"
+# Legacy update settings are retained for manual tooling only.
+UPSTREAM_REPO = "https://github.com/Moviesuploader/FZBypassBot"
 UPSTREAM_BRANCH = "main"

@@ -1,5 +1,5 @@
 aiohttp
-bs4
+beautifulsoup4
 cfscrape
 cloudscraper
 curl_cffi
@@ -7,6 +7,6 @@ lxml
 psutil
 httpx
 requests
-urllib3==1.26
+urllib3
 uvloop
-wzgram
+wzgram==3.1.1
