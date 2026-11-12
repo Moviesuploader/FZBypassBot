@@ -23,7 +23,7 @@ fmed_list = [
 
 def _host_matches(host, *domains):
     host = (host or "").lower().rstrip(".")
-    return any(host == domain or host.endswith("." + domain) for domain in domains)
+    return any(label == domain for label in host.split(".") for domain in domains)
 
 
 def is_share_link(url):
