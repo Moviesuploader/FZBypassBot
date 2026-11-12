@@ -5,6 +5,8 @@ repository is not proof that the third-party site still accepts bypass requests.
 
 ## Fixed in this branch
 
+- Added a dedicated `shrinkme.click` handler using the documented MrProBlogger `/links/go` lane, preserving cookies and waiting for the page timer. It validates the form action and rejects intermediate shortener/blog URLs as final results. Regression tests cover route selection and false-positive prevention; a live run for `dtRhBl8X` is still required to certify current upstream behavior.
+
 - m.easysky previously ran two unrelated transcript handlers sequentially.
   It now runs only its matching handler; linkbnao has its own route.
 - v2.kpslink was shadowed by the generic kpslink route. The specific route now runs first.
@@ -24,6 +26,7 @@ repository is not proof that the third-party site still accepts bypass requests.
 
 | Service | Code status | Live verification |
 |---|---|---|
+| shrinkme.click | Dedicated MrProBlogger handler added | Supplied alias not yet live-verified from the deployment runtime |
 | try2link.com | Disabled; obsolete route removed | Domain currently displays a domain-for-sale page |
 | m.easysky.in | Routing bug fixed | Bypass flow still needs a real sample URL |
 | linkbnao.com | Separate route added | Third-party support directory currently lists it as in development |
