@@ -25,7 +25,8 @@ class Health(BaseHTTPRequestHandler):
         self._respond()
 
     def do_GET(self):
-        body = b"FZ Bypass Bot is alive" if BOT_READY else b"Bot is starting"\n        self._respond(body)
+        body = b"FZ Bypass Bot is alive" if BOT_READY else b"Bot is starting"
+        self._respond(body)
 
     def log_message(self, *_args):
         pass
@@ -73,12 +74,15 @@ async def notify_restart():
 
 
 async def main():
-    global BOT_READY\n    Thread(target=serve_health, daemon=True).start()
+    global BOT_READY
+    Thread(target=serve_health, daemon=True).start()
     await Bypass.start()
-    BOT_READY = True\n    LOGGER.info("FZ Bot Started!")
+    BOT_READY = True
+    LOGGER.info("FZ Bot Started!")
     await notify_restart()
     await idle()
-    BOT_READY = False\n    await Bypass.stop()
+    BOT_READY = False
+    await Bypass.stop()
 
 
 Bypass.loop.run_until_complete(main())
