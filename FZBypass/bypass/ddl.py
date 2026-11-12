@@ -1,7 +1,7 @@
 from requests import post as rpost ,get as rget
 from re import findall, compile
 from time import sleep, time
-from asyncio import sleep as asleep
+from asyncio import sleep as asleep, to_thread
 from urllib.parse import quote, urlparse
 
 from bs4 import BeautifulSoup
@@ -239,21 +239,21 @@ async def transcript(url: str, DOMAIN: str, ref: str, sltime) -> str:
                       raise DDLException("Link Extraction Failed")
 
 
-async def justpaste(url: str):
+def _justpaste_sync(url: str):
     resp = rget(url, verify=False)
     soup = BeautifulSoup(resp.text, "html.parser")
     inps = soup.select('div[id="articleContent"] > p')
     return ", ".join(elem.string for elem in inps)
     
 
-async def linksxyz(url: str):
+def _linksxyz_sync(url: str):
     resp = rget(url)
     soup = BeautifulSoup(resp.text, "html.parser")
     inps = soup.select('div[id="redirect-info"] > a')
     return inps[0]["href"]
 
 
-async def shareus(url: str) -> str:
+def _shareus_sync(url: str) -> str:
     DOMAIN = f"https://api.shrslink.xyz"
     code = url.split('/')[-1]
     headers = {
@@ -281,7 +281,7 @@ async def dropbox(url: str) -> str:
     )
 
 
-async def linkvertise(url: str) -> str:
+def _linkvertise_sync(url: str) -> str:
     resp = rget("https://bypass.pm/bypass2", params={"url": url}).json()
     if resp["success"]:
         return resp["destination"]
@@ -289,7 +289,7 @@ async def linkvertise(url: str) -> str:
         raise DDLException(resp["msg"])
 
 
-async def rslinks(url: str) -> str:
+def _rslinks_sync(url: str) -> str:
     resp = rget(url, stream=True, allow_redirects=False)
     code = resp.headers["location"].split("ms9")[-1]
     try:
@@ -298,7 +298,7 @@ async def rslinks(url: str) -> str:
         raise DDLException("Link Extraction Failed")
 
 
-async def shorter(url: str) -> str:
+def _shorter_sync(url: str) -> str:
     try:
         cget = create_scraper().request
         resp = cget("GET", url, allow_redirects=False)
@@ -307,22 +307,60 @@ async def shorter(url: str) -> str:
         raise DDLException("Link Extraction Failed")
 
 
-async def appurl(url: str):
+def _appurl_sync(url: str):
     cget = create_scraper().request
     resp = cget("GET", url, allow_redirects=False)
     soup = BeautifulSoup(resp.text, "html.parser")
     return soup.select('meta[property="og:url"]')[0]["content"]
 
 
-async def surl(url: str):
+def _surl_sync(url: str):
     cget = create_scraper().request
     resp = cget("GET", f"{url}+")
     soup = BeautifulSoup(resp.text, "html.parser")
     return soup.select('p[class="long-url"]')[0].string.split()[1]
 
 
-async def thinfi(url: str) -> str:
+def _thinfi_sync(url: str) -> str:
     try:
         return BeautifulSoup(rget(url).content, "html.parser").p.a.get("href")
     except:
         raise DDLException("Link Extraction Failed")
+
+
+# These handlers use synchronous requests/cloudscraper clients. Keep network
+# I/O off the Telegram event loop.
+async def justpaste(url: str):
+    return await to_thread(_justpaste_sync, url)
+
+
+async def linksxyz(url: str):
+    return await to_thread(_linksxyz_sync, url)
+
+
+async def shareus(url: str):
+    return await to_thread(_shareus_sync, url)
+
+
+async def linkvertise(url: str):
+    return await to_thread(_linkvertise_sync, url)
+
+
+async def rslinks(url: str):
+    return await to_thread(_rslinks_sync, url)
+
+
+async def shorter(url: str):
+    return await to_thread(_shorter_sync, url)
+
+
+async def appurl(url: str):
+    return await to_thread(_appurl_sync, url)
+
+
+async def surl(url: str):
+    return await to_thread(_surl_sync, url)
+
+
+async def thinfi(url: str):
+    return await to_thread(_thinfi_sync, url)
