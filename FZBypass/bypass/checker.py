@@ -403,6 +403,8 @@ async def direct_link_checker(link, onlylink=False):
         blink = await justpaste(link)
     elif bool(match(r"https?:\/\/linksxyz\.\S+", link)):
         blink = await linksxyz(link)
+    elif bool(match(r"https?:\\/\\/(?:www\\.)?shrinkme\\.click\\/[^/?#]+", link)):
+        blink = await shrinkme(link)
 
     # DL Sites
     elif bool(match(r"https?:\/\/cinevood\.\S+", link)):
