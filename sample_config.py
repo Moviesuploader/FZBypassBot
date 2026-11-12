@@ -23,5 +23,5 @@ DATA_DIR = "data"
 TERA_COOKIE = ""
 
 # Legacy update settings are retained for manual tooling only.
-UPSTREAM_REPO = "https://github.com/rjriajul/FZBypassBot"
+UPSTREAM_REPO = "https://github.com/Moviesuploader/FZBypassBot"
 UPSTREAM_BRANCH = "main"
