@@ -21,26 +21,37 @@ fmed_list = [
 ]
 
 
+def _host_matches(host, *domains):
+    host = (host or "").lower().rstrip(".")
+    return any(host == domain or host.endswith("." + domain) for domain in domains)
+
+
 def is_share_link(url):
-    return bool(
-        match(
-            r"https?:\/\/.+\.(gdtot|filepress|pressbee|gdflix)\.\S+|https?:\/\/(gdflix|filepress|pressbee|onlystream|filebee|appdrive)\.\S+",
-            url,
-        )
+    host = urlparse(url).hostname
+    return _host_matches(
+        host, "gdtot", "filepress", "pressbee", "gdflix",
+        "onlystream", "filebee", "appdrive"
     )
 
 
 def is_excep_link(url):
-    return bool(
-        match(
-            r"https?:\/\/.+\.(1tamilmv|gdtot|filepress|pressbee|gdflix|sharespark)\.\S+|https?:\/\/(sharer|onlystream|hubdrive|katdrive|drivefire|skymovieshd|toonworld4all|kayoanime|cinevood|gdflix|filepress|pressbee|filebee|appdrive)\.\S+",
-            url,
-        )
+    host = urlparse(url).hostname
+    return _host_matches(
+        host, "1tamilmv", "gdtot", "filepress", "pressbee", "gdflix",
+        "sharespark", "sharer", "onlystream", "hubdrive", "katdrive",
+        "drivefire", "skymovieshd", "toonworld4all", "kayoanime",
+        "cinevood", "filebee", "appdrive"
     )
 
 
 async def direct_link_checker(link, onlylink=False):
-    domain = urlparse(link).hostname
+    if not isinstance(link, str) or len(link) > 4096:
+        raise DDLException("Invalid URL")
+    link = link.strip()
+    parsed = urlparse(link)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise DDLException("Only valid HTTP/HTTPS links are supported")
+    domain = parsed.hostname.lower().rstrip(".")
 
     # File Hoster Links
     if bool(match(r"https?:\/\/(yadi|disk.yandex)\.\S+", link)):
@@ -137,8 +148,9 @@ async def direct_link_checker(link, onlylink=False):
         blink = await transcript(
             link, "https://techy.veganab.co/", "https://camdigest.com/", 5
         )
+    elif bool(match(r"https?:\/\/(?:vip\.)?linkbnao\.\S+", link)):
         blink = await transcript(
-            link, "https://vip.linkbnao.com", "https://ffworld.xyz/", 2
+            link, "https://vip.linkbnao.com/", "https://ffworld.xyz/", 2
         )
     elif bool(match(r"https?:\/\/.+\.tnlink\.\S+", link)):
         blink = await transcript(
@@ -253,13 +265,13 @@ async def direct_link_checker(link, onlylink=False):
         blink = await transcript(
             link, "https://vzu.us/", "https://newsbawa.com/", 5
         )
+    elif bool(match(r"https?:\/\/v2\.kpslink\.\S+", link)):
+        blink = await transcript(
+            link, "https://v2.kpslink.in/", "https://infotamizhan.xyz/", 5
+        )
     elif bool(match(r"https?:\/\/(.+\.)?kpslink\.\S+", link)):
         blink = await transcript(
             link, "https://kpslink.in/", "https://infotamizhan.xyz/", 3.1
-        )
-    elif bool(match(r"https?:\/\/v2.kpslink\.\S+", link)):
-        blink = await transcript(
-            link, "https://v2.kpslink.in/", "https://infotamizhan.xyz/", 5
         )
     elif bool(match(r"https?:\/\/tamizhmasters\.\S+", link)):
         blink = await transcript(
