@@ -26,11 +26,6 @@ basicConfig(
 getLogger("pyrogram").setLevel(ERROR)
 LOGGER = getLogger(__name__)
 
-try:
-    import config
-except ImportError:
-    config = None
-
 
 def conf(key, default=""):
     value = getattr(config, key, None) if config else None
