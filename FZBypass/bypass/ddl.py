@@ -2,7 +2,7 @@ from requests import post as rpost ,get as rget
 from re import findall, compile
 from time import sleep, time
 from asyncio import sleep as asleep, to_thread
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from cloudscraper import create_scraper
@@ -268,6 +268,118 @@ async def transcript(url: str, DOMAIN: str, ref: str, sltime) -> str:
         if parsed_destination.scheme not in {"http", "https"} or not parsed_destination.hostname:
             raise DDLException("Shortener did not return a valid destination URL")
         return destination
+
+
+
+def _shrinkme_sync(url: str) -> str:
+    """Resolve shrinkme.click through its MrProBlogger /links/go lane."""
+    parsed = urlparse(url)
+    alias = parsed.path.strip("/")
+    if not alias or "/" in alias or len(alias) > 160:
+        raise DDLException("ShrinkMe short code is missing or invalid")
+
+    session = Session()
+    timeout = (5, 25)
+    mrproblogger_url = f"https://en.mrproblogger.com/{quote(alias, safe='')}"
+    try:
+        response = session.get(
+            mrproblogger_url,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/131.0.0.0 Safari/537.36"
+                ),
+                "Referer": "https://themezon.net/",
+            },
+            timeout=timeout,
+            allow_redirects=True,
+        )
+        response.raise_for_status()
+        final_host = (urlparse(response.url).hostname or "").lower()
+        if final_host != "en.mrproblogger.com":
+            raise DDLException("ShrinkMe redirected outside the expected MrProBlogger host")
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        form = soup.select_one("form#go-link")
+        if form is None:
+            raise DDLException("ShrinkMe MrProBlogger go-link form was not found")
+
+        data = {
+            item.get("name"): item.get("value", "")
+            for item in form.select("input[name]")
+            if item.get("name")
+        }
+        if not data:
+            raise DDLException("ShrinkMe form tokens were not found")
+
+        action = urljoin(response.url, form.get("action") or "/links/go")
+        action_parts = urlparse(action)
+        if action_parts.scheme != "https" or action_parts.hostname != "en.mrproblogger.com":
+            raise DDLException("ShrinkMe form action did not match the expected host")
+
+        timer_match = findall(
+            r"(?:counter_value|countdown|timer)\s*[:=]\s*(\d+(?:\.\d+)?)",
+            response.text,
+            flags=0,
+        )
+        try:
+            wait_seconds = float(timer_match[0]) if timer_match else 12.0
+        except (TypeError, ValueError):
+            wait_seconds = 12.0
+        wait_seconds = max(1.0, min(wait_seconds - 0.8, 20.0))
+        sleep(wait_seconds)
+
+        deadline = time() + 2.0
+        last_message = "ShrinkMe did not return a final destination"
+        while True:
+            result = session.post(
+                action,
+                data=data,
+                headers={
+                    "User-Agent": response.request.headers.get("User-Agent", ""),
+                    "Referer": response.url,
+                    "Origin": "https://en.mrproblogger.com",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Accept": "application/json, text/javascript, */*; q=0.01",
+                },
+                timeout=timeout,
+                allow_redirects=True,
+            )
+            result.raise_for_status()
+            try:
+                payload = result.json()
+            except ValueError:
+                payload = {}
+            destination = payload.get("url") if isinstance(payload, dict) else None
+            destination_parts = urlparse(destination or "")
+            if (
+                destination_parts.scheme in {"http", "https"}
+                and destination_parts.hostname
+                and destination_parts.hostname.lower() not in {
+                    "shrinkme.click", "www.shrinkme.click",
+                    "en.mrproblogger.com", "mrproblogger.com",
+                    "www.mrproblogger.com", "themezon.net", "www.themezon.net",
+                }
+            ):
+                return destination
+            if isinstance(payload, dict) and payload.get("message"):
+                last_message = str(payload["message"])[:180]
+            if time() >= deadline:
+                break
+            sleep(0.5)
+
+        raise DDLException(last_message)
+    except DDLException:
+        raise
+    except Exception as exc:
+        raise DDLException(f"ShrinkMe request failed: {exc.__class__.__name__}") from exc
+    finally:
+        session.close()
+
+
+async def shrinkme(url: str):
+    return await to_thread(_shrinkme_sync, url)
 
 
 def _justpaste_sync(url: str):
