@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from cloudscraper import create_scraper
 from curl_cffi.requests import Session as cSession
 from requests import Session, get as rget
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 
 from FZBypass import Config
 from FZBypass.core.exceptions import DDLException
@@ -116,52 +116,110 @@ async def terabox(url: str) -> str:
         raise DDLException("Link Extraction Failed")
 
 async def try2link(url: str) -> str:
-    DOMAIN = 'https://try2link.com'
-    code = url.split('/')[-1]
+    code = urlparse(url).path.rstrip("/").split("/")[-1]
+    if not code:
+        raise DDLException("Try2Link code is missing")
 
-    async with ClientSession() as session:
-        referers = ['https://hightrip.net/', 'https://to-travel.netl', 'https://world2our.com/']
+    async with ClientSession(timeout=ClientTimeout(total=30, connect=8)) as session:
+        html = None
+        referers = [
+            "https://hightrip.net/",
+            "https://to-travel.net/",
+            "https://world2our.com/",
+        ]
         for referer in referers:
-            async with session.get(f'{DOMAIN}/{code}', headers={"Referer": referer}) as res:
-                if res.status == 200:
-                    html = await res.text()
+            try:
+                async with session.get(
+                    f"https://try2link.com/{code}", headers={"Referer": referer}
+                ) as response:
+                    response.raise_for_status()
+                    html = await response.text()
                     break
+            except Exception:
+                continue
+        if not html:
+            raise DDLException("Try2Link landing page could not be loaded")
+
         soup = BeautifulSoup(html, "html.parser")
-        inputs = soup.find(id="go-link").find_all(name="input")
-        data = { input.get('name'): input.get('value') for input in inputs }
+        form = soup.find(id="go-link")
+        if not form:
+            raise DDLException("Try2Link form was not found")
+        data = {
+            item.get("name"): item.get("value", "")
+            for item in form.find_all("input")
+            if item.get("name")
+        }
+        if not data:
+            raise DDLException("Try2Link form tokens were not found")
+
         await asleep(6)
-        async with session.post(f"{DOMAIN}/links/go", data=data, headers={ "X-Requested-With": "XMLHttpRequest" }) as resp:
-            if 'application/json' in resp.headers.get('Content-Type'):
-                json_data = await resp.json()  
-                try:
-                    return json_data['url']
-                except:        
-                    raise DDLException("Link Extraction Failed")
+        async with session.post(
+            "https://try2link.com/links/go",
+            data=data,
+            headers={
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": f"https://try2link.com/{code}",
+            },
+        ) as response:
+            response.raise_for_status()
+            payload = await response.json(content_type=None)
+        destination = payload.get("url") if isinstance(payload, dict) else None
+        if not destination:
+            raise DDLException("Try2Link did not return a destination URL")
+        return destination
 
 
 async def gyanilinks(url: str) -> str:
-    '''
-    Based on https://github.com/whitedemon938/Bypass-Scripts
-    '''
-    code = url.split('/')[-1]
-    useragent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-    DOMAIN = "https://go.bloggingaro.com"
-    
-    async with ClientSession() as session:
-        async with session.get(f"{DOMAIN}/{code}", headers={'Referer':'https://tech.hipsonyc.com/','User-Agent': useragent}) as res:
-            cookies = res.cookies
-            html = await res.text()
-        async with session.get(f"{DOMAIN}/{code}", headers={'Referer':'https://hipsonyc.com/','User-Agent': useragent}, cookies=cookies) as resp:
-            html = await resp.text()
-        soup = BeautifulSoup(html, 'html.parser')
-        data = {inp.get('name'): inp.get('value') for inp in soup.find_all('input')}
+    code = urlparse(url).path.rstrip("/").split("/")[-1]
+    if not code:
+        raise DDLException("GyaniLinks code is missing")
+    useragent = (
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    )
+    domain = "https://go.bloggingaro.com"
+
+    async with ClientSession(timeout=ClientTimeout(total=30, connect=8)) as session:
+        async with session.get(
+            f"{domain}/{code}",
+            headers={"Referer": "https://tech.hipsonyc.com/", "User-Agent": useragent},
+        ) as response:
+            response.raise_for_status()
+            cookies = response.cookies
+        async with session.get(
+            f"{domain}/{code}",
+            headers={"Referer": "https://hipsonyc.com/", "User-Agent": useragent},
+            cookies=cookies,
+        ) as response:
+            response.raise_for_status()
+            html = await response.text()
+
+        soup = BeautifulSoup(html, "html.parser")
+        data = {
+            item.get("name"): item.get("value", "")
+            for item in soup.find_all("input")
+            if item.get("name")
+        }
+        if not data:
+            raise DDLException("GyaniLinks form tokens were not found")
+
         await asleep(5)
-        async with session.post(f"{DOMAIN}/links/go", data=data, headers={'X-Requested-With':'XMLHttpRequest','User-Agent': useragent, 'Referer': f"{DOMAIN}/{code}"}, cookies=cookies) as links:
-            if 'application/json' in links.headers.get('Content-Type'):
-                try:
-                    return (await links.json())['url']
-                except Exception:
-                      raise DDLException("Link Extraction Failed")
+        async with session.post(
+            f"{domain}/links/go",
+            data=data,
+            headers={
+                "X-Requested-With": "XMLHttpRequest",
+                "User-Agent": useragent,
+                "Referer": f"{domain}/{code}",
+            },
+            cookies=cookies,
+        ) as response:
+            response.raise_for_status()
+            payload = await response.json(content_type=None)
+        destination = payload.get("url") if isinstance(payload, dict) else None
+        if not destination:
+            raise DDLException("GyaniLinks did not return a destination URL")
+        return destination
 
 
 async def ouo(url: str):
