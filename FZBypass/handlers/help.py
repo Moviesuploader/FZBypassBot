@@ -21,7 +21,7 @@ OWNER_HELP = f"""
 
 ┎ <b><i>OWNER ONLY :</i></b>
 ┠ <b>/{BotCommands.LogCommand}</b> <i>- Get log file</i>
-┠ <b>/{BotCommands.RestartCommand}</b> <i>- Update and restart</i>
+┠ <b>/{BotCommands.RestartCommand}</b> <i>- Restart bot process</i>
 ┠ <b>/{BotCommands.BashCommand}</b> <code>[code]</code> <i>- Run python</i>
 ┖ <b>/{BotCommands.ShellCommand}</b> <code>[cmd]</code> <i>- Run shell</i>"""
 
