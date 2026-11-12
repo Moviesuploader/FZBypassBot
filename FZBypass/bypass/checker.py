@@ -437,13 +437,19 @@ async def direct_link_checker(link, onlylink=False):
         return blink
 
     links = []
-    while True:
+    visited = set()
+    for _ in range(10):
+        if not isinstance(blink, str) or not blink or blink in visited:
+            break
+        visited.add(blink)
+        links.append(blink)
         try:
-            links.append(blink)
-            blink = await direct_link_checker(blink, onlylink=True)
-            if is_excep_link(links[-1]):
-                links.append("\n\n" + blink)
-                break
+            next_link = await direct_link_checker(blink, onlylink=True)
         except Exception:
             break
+        if is_excep_link(blink):
+            if next_link:
+                links.append("\n\n" + str(next_link))
+            break
+        blink = next_link
     return links
