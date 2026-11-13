@@ -53,3 +53,21 @@ each service. Never use guessed/fabricated short codes as proof of a working byp
 
 These services may change their redirect and verification flow. A supported route means
 the bot recognizes the provider; it does not mean every challenge can be completed.
+
+## Follow-up hardening — 13 November 2026
+
+- Exeygo now uses the shared form resolver on pages without interactive challenges;
+  the resolver rejects Cloudflare Turnstile/challenge pages instead of fabricating tokens.
+- Cuttty is classified from the supplied live page inspection as a multi-step ad/CAPTCHA
+  flow with a disabled final submit button. The handler now reports that exact blocker
+  instead of incorrectly labeling it specifically as Turnstile.
+- Every DDL shortener result is validated as a non-empty HTTP(S) URL before it can be
+  reported as a successful bypass. This prevents empty strings, null, and malformed
+  values from appearing as successful links.
+- Added scripts/shortener-check.sh: compile + pytest + a non-blocking DNS diagnostic
+  for the supplied providers. It emits one compact result line on success and up to
+  three exact error lines on failure.
+
+The DNS probe is informational: a provider CDN NXDOMAIN is an upstream DNS/service
+issue, not a Python handler regression. This script does not claim every legacy
+provider has been live-tested.
