@@ -44,6 +44,19 @@ def is_excep_link(url):
     )
 
 
+def _validate_shortener_destination(source_url, destination):
+    """Reject empty, malformed, or non-web results from shortener handlers."""
+    if not isinstance(destination, str) or not destination.strip():
+        raise DDLException("Shortener returned an empty destination")
+    destination = destination.strip()
+    parsed = urlparse(destination)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise DDLException(
+            f"Shortener returned an invalid destination for {urlparse(source_url).hostname}"
+        )
+    return destination
+
+
 async def direct_link_checker(link, onlylink=False):
     if not isinstance(link, str) or len(link) > 4096:
         raise DDLException("Invalid URL")
@@ -408,14 +421,17 @@ async def direct_link_checker(link, onlylink=False):
             link, "https://gplinks.co/", "https://gplinks.co/", 5
         )
     elif domain in {"exeygo.com", "www.exeygo.com"} and bool(parsed.path.strip("/")):
-        raise DDLException(
-            "Exeygo requires an interactive Cloudflare Turnstile verification; "
-            "this bot cannot solve or bypass that challenge."
+        # Exeygo shares the common form lane on pages without an interactive
+        # challenge. transcript() detects Turnstile/Cloudflare challenge pages.
+        blink = await transcript(
+            link, "https://exeygo.com/", "https://exeygo.com/", 5
         )
     elif domain in {"cuttty.com", "www.cuttty.com"} and bool(parsed.path.strip("/")):
+        # Cuttty's inspected page uses a multi-step ad + CAPTCHA flow and a
+        # disabled final submit control. Do not fake completion or POST tokens.
         raise DDLException(
-            "Cuttty requires an interactive Cloudflare Turnstile verification; "
-            "this bot cannot solve or bypass that challenge."
+            "Cuttty requires interactive ad/CAPTCHA completion in a browser; "
+            "automatic completion is not supported."
         )
     elif domain in {"shrinkme.click", "www.shrinkme.click"} and bool(parsed.path.strip("/")):
         blink = await shrinkme(link)
@@ -461,6 +477,7 @@ async def direct_link_checker(link, onlylink=False):
             f"<i>No Bypass Function Found for your Link :</i> <code>{link}</code>"
         )
 
+    blink = _validate_shortener_destination(link, blink)
     if onlylink:
         return blink
 
