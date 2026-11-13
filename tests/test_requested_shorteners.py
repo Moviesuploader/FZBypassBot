@@ -7,15 +7,38 @@ from FZBypass.core.exceptions import DDLException
 
 
 @pytest.mark.parametrize("url", ["https://exeygo.com/oJE4X", "https://www.exeygo.com/oJE4X"])
-def test_exeygo_is_recognized_but_interactive_turnstile_is_not_bypassed(url):
-    with pytest.raises(DDLException, match="interactive Cloudflare Turnstile"):
-        asyncio.run(checker.direct_link_checker(url, onlylink=True))
+def test_exeygo_uses_common_form_resolver_when_no_challenge(monkeypatch, url):
+    called = {}
+
+    async def fake_transcript(source, domain, referer, wait):
+        called.update(source=source, domain=domain, referer=referer, wait=wait)
+        return "https://destination.example/file"
+
+    monkeypatch.setattr(checker, "transcript", fake_transcript)
+    result = asyncio.run(checker.direct_link_checker(url, onlylink=True))
+
+    assert result == "https://destination.example/file"
+    assert called == {
+        "source": url,
+        "domain": "https://exeygo.com/",
+        "referer": "https://exeygo.com/",
+        "wait": 5,
+    }
 
 
 @pytest.mark.parametrize("url", ["https://cuttty.com/0U4XsB", "https://www.cuttty.com/0U4XsB"])
-def test_cuttty_is_recognized_but_interactive_turnstile_is_not_bypassed(url):
-    with pytest.raises(DDLException, match="interactive Cloudflare Turnstile"):
+def test_cuttty_reports_interactive_ad_captcha_requirement(url):
+    with pytest.raises(DDLException, match="interactive ad/CAPTCHA"):
         asyncio.run(checker.direct_link_checker(url, onlylink=True))
+
+
+def test_shortener_rejects_empty_or_non_web_destination(monkeypatch):
+    async def fake_transcript(*args):
+        return "not-a-url"
+
+    monkeypatch.setattr(checker, "transcript", fake_transcript)
+    with pytest.raises(DDLException, match="invalid destination"):
+        asyncio.run(checker.direct_link_checker("https://gplinks.co/OblC", onlylink=True))
 
 
 def test_gplinks_routes_to_bounded_form_handler(monkeypatch):
